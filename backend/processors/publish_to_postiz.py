@@ -12,6 +12,7 @@ import os
 import time
 import argparse
 import requests
+import base64
 from pathlib import Path
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -20,6 +21,9 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.supabase_client import get_client, update_post_status
+
+# Directory where generated images are stored
+IMAGE_DIR = Path(__file__).parent.parent / ".tmp" / "post_images"
 
 # Load env
 env_paths = [Path(__file__).parent.parent / ".env", Path(__file__).parent.parent.parent / ".env"]
@@ -54,7 +58,37 @@ def get_integration_id(platform: str) -> str | None:
         return None
 
 
-def publish_post(post: dict) -> bool:
+def upload_image_to_postiz(image_path: Path) -> str | None:
+    """Upload an image to Postiz and return the media ID/URL."""
+    try:
+        # Read image and convert to base64
+        with open(image_path, "rb") as img_file:
+            image_data = base64.b64encode(img_file.read()).decode()
+
+        # Upload to Postiz media endpoint
+        response = requests.post(
+            f"{POSTIZ_BASE_URL}/public/v1/media",
+            json={"file": f"data:image/png;base64,{image_data}"},
+            headers={
+                "Authorization": POSTIZ_API_KEY,
+                "Content-Type": "application/json",
+            },
+            timeout=30,
+        )
+
+        if response.status_code in (200, 201):
+            result = response.json()
+            return result.get("id") or result.get("url")
+        else:
+            print(f"  [WARN] Image upload failed ({response.status_code}), posting text only")
+            return None
+
+    except Exception as e:
+        print(f"  [WARN] Image upload error: {e}, posting text only")
+        return None
+
+
+def publish_post(post: dict, use_images: bool = True) -> bool:
     """Publish a single post via Postiz API."""
     if not POSTIZ_API_KEY:
         print("  [SKIP] No POSTIZ_API_KEY configured.")
@@ -70,6 +104,16 @@ def publish_post(post: dict) -> bool:
     hashtag_str = " ".join(f"#{h.replace(' ', '')}" for h in hashtags) if hashtags else ""
     full_content = f"{post['content']}\n\n{hashtag_str}".strip()
 
+    # Check for generated image
+    images = []
+    if use_images:
+        image_path = IMAGE_DIR / f"post_{post['id']}.png"
+        if image_path.exists():
+            print(f"    Using image: {image_path.name}")
+            media_id = upload_image_to_postiz(image_path)
+            if media_id:
+                images = [media_id]
+
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
     try:
@@ -83,7 +127,7 @@ def publish_post(post: dict) -> bool:
                 "posts": [
                     {
                         "integration": {"id": integration_id},
-                        "value": [{"content": full_content, "image": []}],
+                        "value": [{"content": full_content if not images else "", "image": images}],
                         "settings": {"__type": platform},
                     }
                 ],
@@ -115,7 +159,7 @@ def publish_post(post: dict) -> bool:
         return False
 
 
-def publish_drafts(platform: str = None):
+def publish_drafts(platform: str = None, use_images: bool = True):
     """Publish all draft posts, optionally filtered by platform."""
     query = (
         get_client()
@@ -132,21 +176,24 @@ def publish_drafts(platform: str = None):
         print("[INFO] No draft posts to publish.")
         return
 
-    print(f"[INFO] Publishing {len(posts)} draft posts...")
+    mode = "IMAGE" if use_images else "TEXT"
+    print(f"[INFO] Publishing {len(posts)} draft posts ({mode} mode)...\n")
 
     published = 0
     for post in posts:
         platform_name = post["platform"].upper()
         print(f"  [{platform_name}] Publishing post {post['id'][:8]}...")
-        if publish_post(post):
+        if publish_post(post, use_images=use_images):
             published += 1
+            print(f"    ✓ Published successfully")
         time.sleep(3)
 
-    print(f"[DONE] Published {published}/{len(posts)} posts.")
+    print(f"\n[DONE] Published {published}/{len(posts)} posts.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--platform", choices=["tiktok", "telegram", "linkedin"])
+    parser.add_argument("--text-only", action="store_true", help="Post text only (no images)")
     args = parser.parse_args()
-    publish_drafts(platform=args.platform)
+    publish_drafts(platform=args.platform, use_images=not args.text_only)
