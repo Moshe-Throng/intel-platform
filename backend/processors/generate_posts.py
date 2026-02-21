@@ -1,12 +1,14 @@
 """
 generate_posts.py - Generate social media posts from tagged articles
 
-Creates platform-specific posts for TikTok, Telegram, and LinkedIn.
-Uses GPT-4 to generate engaging copy.
+Creates platform-specific posts for Telegram (primary), with optional TikTok/LinkedIn support.
+Uses GPT-4 to generate business-focused content for Ethiopian professionals.
+
+Focus: Ethiopia business & finance intelligence
 
 Usage:
-    python -m processors.generate_posts                    # All platforms
-    python -m processors.generate_posts --platform telegram  # Single platform
+    python -m processors.generate_posts                    # Telegram only
+    python -m processors.generate_posts --platform telegram  # Explicit
 """
 
 import os
@@ -31,26 +33,42 @@ for p in env_paths:
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 PLATFORM_SPECS = {
-    "tiktok": {
-        "max_chars": 150,
-        "max_hashtags": 5,
-        "style": "Short, punchy, attention-grabbing. Use emojis. Designed for TikTok caption overlay. Must be under 150 characters (excluding hashtags).",
-    },
     "telegram": {
         "max_chars": 1000,
         "max_hashtags": 5,
-        "style": "Informative, professional but accessible. Include a brief analysis or key takeaway. Can use bullet points. Include the article link at the end.",
+        "style": "Professional business intelligence brief. Start with a clear headline/hook. Provide key facts and analysis. Include business implications for Ethiopia. End with article link. Use bullet points for clarity when appropriate.",
+    },
+    "tiktok": {
+        "max_chars": 150,
+        "max_hashtags": 5,
+        "style": "Short, punchy business news update. Under 150 characters (excluding hashtags).",
     },
     "linkedin": {
         "max_chars": 700,
         "max_hashtags": 5,
-        "style": "Professional, analytical. Start with a hook. Provide context on why this matters for the development/humanitarian sector. Include a call to action or question.",
+        "style": "Professional business analysis. Start with why this matters. Provide Ethiopian business context. Include actionable insights or questions for discussion.",
     },
 }
 
-SYSTEM_PROMPT = """You are a social media content creator for an Ethiopia-focused development and humanitarian news platform called "Devidends Intel".
+SYSTEM_PROMPT = """You are a business intelligence content creator for "Intel Platform" - Ethiopia's premier business & finance news intelligence service.
 
-Generate a social media post for the given article and platform. Follow the platform-specific guidelines exactly.
+Your audience: Ethiopian business professionals, investors, policymakers, financial analysts, and entrepreneurs.
+
+Focus areas:
+- Tax Issues
+- Investment & M&A
+- Economy (GDP, inflation, trade)
+- Public Policy (regulations, reforms)
+- Business Agreements & Partnerships
+- Bank News (NBE policy, financial sector)
+
+Tone: Professional, analytical, fact-based. Avoid sensationalism. Focus on business implications and actionable intelligence.
+
+Generate a social media post that:
+1. Highlights the most important business angle
+2. Provides Ethiopian context where relevant
+3. Explains "why this matters" for business decision-makers
+4. Is concise and scannable
 
 RESPOND ONLY WITH VALID JSON:
 {
@@ -65,16 +83,16 @@ def generate_post(article: dict, platform: str) -> dict | None:
 
     user_prompt = f"""ARTICLE:
 Title: {article['title']}
-Summary: {article.get('summary', 'N/A')[:500]}
+Summary: {article.get('summary', 'N/A')[:600]}
 Urgency: {article.get('urgency', 'normal')}
-URL: {article['url']}
+Source URL: {article['url']}
 
 PLATFORM: {platform.upper()}
 MAX CHARACTERS: {spec['max_chars']}
 MAX HASHTAGS: {spec['max_hashtags']}
 STYLE: {spec['style']}
 
-Generate the post."""
+Generate a business intelligence post."""
 
     try:
         response = client.chat.completions.create(
@@ -84,7 +102,7 @@ Generate the post."""
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.7,
-            max_tokens=500,
+            max_tokens=600,
             response_format={"type": "json_object"},
         )
 
@@ -127,14 +145,15 @@ def generate_for_platform(platform: str, limit: int = 20):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--platform", choices=["tiktok", "telegram", "linkedin"],
-                        help="Generate for specific platform only")
+    parser.add_argument("--platform", choices=["telegram", "tiktok", "linkedin"],
+                        help="Generate for specific platform (default: telegram only)")
     parser.add_argument("--limit", type=int, default=20)
     args = parser.parse_args()
 
-    platforms = [args.platform] if args.platform else ["tiktok", "telegram", "linkedin"]
+    # Default to Telegram only (our primary platform for Ethiopia business intel)
+    platforms = [args.platform] if args.platform else ["telegram"]
 
-    print("[INFO] Generating social media posts...")
+    print("[INFO] Generating business intelligence posts...")
     for platform in platforms:
         generate_for_platform(platform, limit=args.limit)
     print("[DONE]")

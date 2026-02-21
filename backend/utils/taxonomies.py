@@ -3,33 +3,58 @@ taxonomies.py - Tag definitions for GPT-4 auto-tagging
 
 These lists are passed to GPT-4 as the allowed tag vocabulary.
 Must match what's seeded in the tags table.
+
+Focus: Ethiopia business & finance intelligence
 """
 
+# Primary business topics (6 key themes)
 TOPICS = [
-    "Humanitarian Aid", "Food Security", "Health", "Education",
-    "Climate Change", "Conflict", "Displacement", "Governance",
-    "Economic Development", "Gender Equality", "Water & Sanitation",
-    "Agriculture", "Infrastructure", "Human Rights", "Elections",
-    "Peace & Security", "Refugees", "Child Protection", "Nutrition",
-    "Funding & Grants",
+    "Tax Issues",
+    "Investment & M&A",
+    "Economy",
+    "Public Policy",
+    "Business Agreements",
+    "Bank News",
 ]
 
-ACTORS = [
-    "UN", "USAID", "World Bank", "African Union", "EU", "WHO",
-    "UNICEF", "WFP", "UNHCR", "ICRC", "Government of Ethiopia",
-    "African Development Bank", "DFID/FCDO", "Gates Foundation",
-    "Save the Children",
-]
-
-LOCATIONS = [
-    "Addis Ababa", "Tigray", "Amhara", "Oromia", "Somali Region",
-    "SNNPR", "Afar", "Sidama", "Benishangul-Gumuz", "Gambella",
-    "Dire Dawa", "Harari",
-]
-
+# Business sectors
 SECTORS = [
-    "NGO", "Government", "Private Sector", "Multilateral",
-    "Bilateral", "Academia", "Media", "Civil Society",
+    "Banking & Finance",
+    "Agriculture",
+    "Manufacturing",
+    "Technology",
+    "Real Estate",
+    "Telecommunications",
+    "Energy & Utilities",
+    "Transportation",
+    "Retail & Trade",
+    "Tourism & Hospitality",
+    "Construction",
+    "Mining",
 ]
 
-ALL_TAGS = TOPICS + ACTORS + LOCATIONS + SECTORS
+# Key actors in Ethiopian business
+ACTORS = [
+    "Government",
+    "Central Bank",
+    "Commercial Banks",
+    "Foreign Investors",
+    "Private Sector",
+    "State-Owned Enterprises",
+    "International Organizations",
+    "Regulatory Bodies",
+]
+
+# Locations (Ethiopia-focused)
+LOCATIONS = [
+    "Addis Ababa",
+    "Oromia Region",
+    "Amhara Region",
+    "Tigray Region",
+    "SNNPR",
+    "Ethiopia (National)",
+    "East Africa (Regional)",
+    "Africa (Continental)",
+]
+
+ALL_TAGS = TOPICS + SECTORS + ACTORS + LOCATIONS

@@ -4,6 +4,8 @@ auto_tag_articles.py - GPT-4 powered article tagger
 Reads untagged articles from Supabase, sends them to GPT-4 for classification,
 and writes tags + urgency back to the database.
 
+Focus: Ethiopia business & finance intelligence with 6 key themes
+
 Usage:
     python -m processors.auto_tag_articles          # Tag up to 50 articles
     python -m processors.auto_tag_articles --limit 10  # Tag up to 10
@@ -31,16 +33,24 @@ for p in env_paths:
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-SYSTEM_PROMPT = """You are an article classifier for an Ethiopia-focused news intelligence platform.
+SYSTEM_PROMPT = """You are an article classifier for an Ethiopia business & finance intelligence platform.
 
 Given an article title and summary, classify it by selecting the most relevant tags from each category and assigning an urgency level.
 
+FOCUS: Ethiopian business news covering these 6 key topics:
+1. Tax Issues - tax policy, reforms, compliance, revenue collection
+2. Investment & M&A - foreign/domestic investment, mergers, acquisitions, privatization
+3. Economy - GDP, inflation, trade, economic policy, macroeconomic indicators
+4. Public Policy - regulations, government reforms, business environment, licensing
+5. Business Agreements - partnerships, treaties, trade deals, contracts
+6. Bank News - banking sector news, NBE policy, financial services, lending
+
 RULES:
-- Select 1-5 tags from Topics
-- Select 0-3 tags from Actors (only if explicitly mentioned or clearly involved)
-- Select 0-3 tags from Locations (only if explicitly mentioned)
-- Select 0-2 tags from Sectors
-- Assign urgency: "critical" (immediate humanitarian crisis, active conflict), "high" (significant policy change, major funding), "normal" (routine updates), "low" (background info, opinion pieces)
+- Select 1-3 tags from Topics (the 6 key business topics above)
+- Select 0-2 tags from Actors (government, central bank, banks, investors, etc.)
+- Select 0-2 tags from Locations (Ethiopian regions or broader geographic scope)
+- Select 0-2 tags from Sectors (industries involved)
+- Assign urgency: "critical" (major policy change, financial crisis, market shock), "high" (significant business impact, major deals), "normal" (routine business news), "low" (background info, opinion)
 
 RESPOND ONLY WITH VALID JSON in this exact format:
 {
@@ -65,7 +75,7 @@ Actors: {', '.join(ACTORS)}
 Locations: {', '.join(LOCATIONS)}
 Sectors: {', '.join(SECTORS)}
 
-Classify this article."""
+Classify this business article."""
     return text
 
 
