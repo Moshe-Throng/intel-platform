@@ -2,7 +2,7 @@
 crawl_news.py - Main crawl orchestrator
 
 Fetches all active sources from Supabase, crawls them (RSS or web),
-and inserts new articles into the database.
+filters for Ethiopia relevance, and inserts new articles into the database.
 
 Usage:
     python -m crawlers.crawl_news              # Crawl all active sources
@@ -18,18 +18,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.supabase_client import get_active_sources, insert_articles_batch, update_source_last_crawled
+from utils.content_filter import filter_articles
 from crawlers.rss_parser import parse_rss_feed
 from crawlers.web_scraper import scrape_website
 
 
 def crawl_all(rss_only: bool = False, web_only: bool = False):
-    """Crawl all active news sources and insert articles."""
+    """Crawl all active news sources and insert Ethiopia-relevant articles."""
     print("=" * 60)
-    print(f"Intel Platform - News Crawler")
+    print(f"Intel Platform - Ethiopia Business News Crawler")
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
 
     total_new = 0
+    total_filtered = 0
 
     # Crawl RSS feeds
     if not web_only:
@@ -42,11 +44,20 @@ def crawl_all(rss_only: bool = False, web_only: bool = False):
                 articles = parse_rss_feed(source["url"], source["id"])
                 print(f"  Parsed: {len(articles)} articles")
 
-                if articles:
-                    inserted = insert_articles_batch(articles)
+                # Filter for Ethiopia relevance
+                filtered = filter_articles(articles)
+                filtered_out = len(articles) - len(filtered)
+                if filtered_out > 0:
+                    print(f"  Filtered: {filtered_out} non-Ethiopia articles removed")
+                total_filtered += filtered_out
+
+                if filtered:
+                    inserted = insert_articles_batch(filtered)
                     new_count = len(inserted)
                     total_new += new_count
-                    print(f"  New: {new_count} (skipped {len(articles) - new_count} duplicates)")
+                    print(f"  New: {new_count} Ethiopia articles (skipped {len(filtered) - new_count} duplicates)")
+                else:
+                    print(f"  New: 0 Ethiopia articles")
 
                 update_source_last_crawled(source["id"])
 
@@ -64,11 +75,20 @@ def crawl_all(rss_only: bool = False, web_only: bool = False):
                 articles = scrape_website(source["url"], source["id"])
                 print(f"  Extracted: {len(articles)} articles")
 
-                if articles:
-                    inserted = insert_articles_batch(articles)
+                # Filter for Ethiopia relevance
+                filtered = filter_articles(articles)
+                filtered_out = len(articles) - len(filtered)
+                if filtered_out > 0:
+                    print(f"  Filtered: {filtered_out} non-Ethiopia articles removed")
+                total_filtered += filtered_out
+
+                if filtered:
+                    inserted = insert_articles_batch(filtered)
                     new_count = len(inserted)
                     total_new += new_count
-                    print(f"  New: {new_count} (skipped {len(articles) - new_count} duplicates)")
+                    print(f"  New: {new_count} Ethiopia articles (skipped {len(filtered) - new_count} duplicates)")
+                else:
+                    print(f"  New: 0 Ethiopia articles")
 
                 update_source_last_crawled(source["id"])
 
@@ -76,7 +96,8 @@ def crawl_all(rss_only: bool = False, web_only: bool = False):
                 print(f"  [ERROR] {source['name']}: {e}")
 
     print(f"\n{'=' * 60}")
-    print(f"[DONE] Total new articles: {total_new}")
+    print(f"[DONE] Total new Ethiopia articles: {total_new}")
+    print(f"[INFO] Total filtered out (non-Ethiopia): {total_filtered}")
     print(f"Finished: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
 
