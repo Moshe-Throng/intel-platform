@@ -110,9 +110,13 @@ def publish_post(post: dict, use_images: bool = True) -> bool:
         image_path = IMAGE_DIR / f"post_{post['id']}.png"
         if image_path.exists():
             print(f"    Using image: {image_path.name}")
-            media_id = upload_image_to_postiz(image_path)
-            if media_id:
-                images = [media_id]
+            # Read and encode image directly (no separate upload)
+            try:
+                with open(image_path, "rb") as img_file:
+                    image_data = base64.b64encode(img_file.read()).decode()
+                    images = [f"data:image/png;base64,{image_data}"]
+            except Exception as e:
+                print(f"    [WARN] Image read failed: {e}")
 
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
