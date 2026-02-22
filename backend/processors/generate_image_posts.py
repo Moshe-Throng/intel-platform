@@ -74,8 +74,8 @@ def create_news_graphic(post: dict, output_path: Path):
         post: Dict with 'title', 'content', 'tags', etc.
         output_path: Where to save the PNG
     """
-    # Canvas size (optimized for Telegram)
-    width, height = 1200, 1600
+    # Canvas size (smaller for Postiz upload limits)
+    width, height = 600, 800  # Further reduced to avoid 413 payload errors
 
     # Determine color scheme from primary tag
     primary_tag = post.get("tags", ["default"])[0] if post.get("tags") else "default"
@@ -160,8 +160,8 @@ def create_news_graphic(post: dict, output_path: Path):
     hashtags = " ".join([f"#{tag.replace(' ', '')}" for tag in post.get("tags", [])[:3]])
     draw.text((50, footer_y + 85), hashtags, fill=colors["accent"], font=font_date)
 
-    # Save image
-    img.save(output_path, "PNG", quality=95)
+    # Save image with optimization to reduce file size
+    img.save(output_path, "PNG", optimize=True, quality=85)
     print(f"  Generated: {output_path.name}")
 
 
