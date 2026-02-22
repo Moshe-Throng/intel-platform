@@ -114,11 +114,11 @@ def publish_post(post: dict, use_images: bool = True) -> bool:
             try:
                 with open(image_path, "rb") as img_file:
                     image_data = base64.b64encode(img_file.read()).decode()
-                    # Postiz expects: id, path, AND File fields
+                    # Postiz/Telegram expects raw base64 data, NOT data URI format
                     images = [{
                         "id": image_path.name,
                         "path": image_path.name,
-                        "File": f"data:image/png;base64,{image_data}"
+                        "File": image_data  # Just base64, no "data:image/png;base64," prefix
                     }]
             except Exception as e:
                 print(f"    [WARN] Image read failed: {e}")
