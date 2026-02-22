@@ -127,7 +127,7 @@ def publish_post(post: dict, use_images: bool = True) -> bool:
                 "posts": [
                     {
                         "integration": {"id": integration_id},
-                        "value": [{"content": full_content if not images else "", "image": images}],
+                        "value": [{"content": full_content, "image": images}],
                         "settings": {"__type": platform},
                     }
                 ],
