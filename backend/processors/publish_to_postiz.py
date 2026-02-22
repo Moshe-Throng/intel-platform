@@ -114,7 +114,8 @@ def publish_post(post: dict, use_images: bool = True) -> bool:
             try:
                 with open(image_path, "rb") as img_file:
                     image_data = base64.b64encode(img_file.read()).decode()
-                    images = [f"data:image/png;base64,{image_data}"]
+                    # Postiz expects array of objects, not strings
+                    images = [{"path": f"data:image/png;base64,{image_data}"}]
             except Exception as e:
                 print(f"    [WARN] Image read failed: {e}")
 
