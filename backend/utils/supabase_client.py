@@ -177,3 +177,82 @@ def update_post_status(post_id: str, status: str, postiz_post_id: str = None):
     if status == "published":
         update["published_at"] = "now()"
     get_client().table("published_posts").update(update).eq("id", post_id).execute()
+
+
+def get_unpublished_posts(platform: str = "telegram", limit: int = 10) -> list[dict]:
+    """
+    Fetch draft posts with enriched article data for image generation.
+    Returns posts with: id, title, content, tags (list of topic names).
+    """
+    # Get draft posts
+    posts = (
+        get_client()
+        .table("published_posts")
+        .select("id, article_id, content, hashtags, platform")
+        .eq("platform", platform)
+        .eq("status", "draft")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+        .data
+    )
+
+    if not posts:
+        return []
+
+    # Enrich each post with article data and tags
+    enriched = []
+    for post in posts:
+        # Get article title and summary
+        article = (
+            get_client()
+            .table("articles")
+            .select("id, title, summary, url")
+            .eq("id", post["article_id"])
+            .execute()
+            .data
+        )
+
+        if not article:
+            continue  # Skip if article deleted
+
+        article = article[0]
+
+        # Get topic tags (for category colors in image)
+        article_tags = (
+            get_client()
+            .table("article_tags")
+            .select("tag_id")
+            .eq("article_id", article["id"])
+            .execute()
+            .data
+        )
+
+        tag_names = []
+        if article_tags:
+            tag_ids = [t["tag_id"] for t in article_tags]
+            tags = (
+                get_client()
+                .table("tags")
+                .select("name, category")
+                .in_("id", tag_ids)
+                .eq("category", "topic")  # Only topic tags (Tax, Investment, etc.)
+                .execute()
+                .data
+            )
+            tag_names = [t["name"] for t in tags]
+
+        # Combine post + article data for image template
+        enriched.append({
+            "id": post["id"],
+            "article_id": article["id"],
+            "title": article["title"],
+            "content": post["content"],
+            "summary": article.get("summary", ""),
+            "url": article["url"],
+            "tags": tag_names,  # For category colors
+            "hashtags": post.get("hashtags", []),
+            "platform": post["platform"]
+        })
+
+    return enriched

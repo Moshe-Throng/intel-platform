@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from utils.supabase_client import get_unpublished_posts, mark_post_published
+from utils.supabase_client import get_unpublished_posts
 
 # Load env
 env_paths = [Path(__file__).parent.parent / ".env", Path(__file__).parent.parent.parent / ".env"]
@@ -175,7 +175,7 @@ def generate_images(limit: int = 10):
 
     print(f"[INFO] Generating {len(posts)} image posts...\n")
 
-    generated = []
+    generated_count = 0
     for i, post in enumerate(posts):
         title_safe = post['title'][:60].encode('ascii', 'replace').decode()
         print(f"  [{i+1}/{len(posts)}] {title_safe}...")
@@ -186,16 +186,11 @@ def generate_images(limit: int = 10):
 
         try:
             create_news_graphic(post, output_path)
-            generated.append({
-                "post_id": post["id"],
-                "image_path": str(output_path),
-                "platform": "telegram"
-            })
+            generated_count += 1
         except Exception as e:
             print(f"    [ERROR] Failed to generate image: {e}")
 
-    print(f"\n[DONE] Generated {len(generated)} images in {OUTPUT_DIR}")
-    return generated
+    print(f"\n[DONE] Generated {generated_count} images in {OUTPUT_DIR}")
 
 
 if __name__ == "__main__":
